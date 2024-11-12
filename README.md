@@ -1,4 +1,4 @@
-## Whisper for Low Quality Recordings
+## Whisper for Low-Quality Recordings
 
 Whisper4LQR is an adaptation of [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper).
 

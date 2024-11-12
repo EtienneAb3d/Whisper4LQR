@@ -13,6 +13,8 @@ Transcription optimisation:
 
 To have a look at Faster-Whisper modifications, [search for #CBX](https://github.com/search?q=repo%3AEtienneAb3d%2FWhisper4LQR%20%23CBX&type=code) in the repository.
 
+*Developed with the help of our partner [Feedae](https://www.feedae.com/)*
+
 ## Installation
 
 **Check ffmpeg version >=4.4**

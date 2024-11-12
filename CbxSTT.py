@@ -47,7 +47,7 @@ class CbxSTT():
                 #Detect only strong redudancies
                 ,compression_ratio_threshold = 5
                 #Only >0 to get several propositions per values, 
-                # and don't stop on suppose good single one in fact not good
+                # and don't stop on a supposed good single one, but in fact not good
                 ,temperature = [
                     0.0001,
                     0.1,

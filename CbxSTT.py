@@ -57,7 +57,7 @@ class CbxSTT():
                     1.0,
                 ]
                 ,vad_filter = True
-                #High values causes some speech parts ignored, 
+                #High values cause some speech parts ignored, 
                 # while too small values don't cut properly between sentences
                 ,vad_parameters={
                     "onset":0.01,

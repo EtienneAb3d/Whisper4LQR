@@ -31,6 +31,8 @@ sudo apt-get -qq install -y ffmpeg
 
 ```
 
+**Whisper4LQR installation**
+
 ```sh
 git clone https://github.com/EtienneAb3d/Whisper4LQR.git
 cd Whisper4LQR

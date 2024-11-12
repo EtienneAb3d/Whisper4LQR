@@ -2,7 +2,7 @@
 
 Whisper4LQR is an adaptation of [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper).
 
-Whisper4LQR's purpose is to provides better recognition capabilities on low-quality recordings, even if it may take significantly more computation time than Faster-Whisper.
+Whisper4LQR's purpose is to provide better recognition capabilities on low-quality recordings, even if it may take significantly more computation time than Faster-Whisper.
 
 Transcription optimisation:
 - Pre-processing to extract, clean, and enhance voices with minimal noise.

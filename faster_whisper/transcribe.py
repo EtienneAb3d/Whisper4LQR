@@ -30,7 +30,8 @@ from faster_whisper.vad import (
     get_speech_timestamps,
     merge_segments,
 )
-
+#CBX
+import re
 
 @dataclass
 class Word:
@@ -1136,7 +1137,11 @@ class WhisperModel:
                     "Processing segment at %s", format_timestamp(time_offset)
                 )
 
-            previous_tokens = all_tokens[prompt_reset_since:]
+            #CBX: Always use prompt only
+            #      This is possible when segments are always cut outside sentences
+            # previous_tokens = all_tokens[prompt_reset_since:]
+            previous_tokens = []
+            previous_tokens.extend(initial_prompt_tokens)
 
             if encoder_output is None:
                 encoder_output = self.encode(segment)
@@ -1417,7 +1422,13 @@ class WhisperModel:
             result = self.model.generate(
                 encoder_output,
                 [prompt],
-                length_penalty=options.length_penalty,
+                #CBX: Always use length_penalty 1
+                #     Other values often damage the transcription
+                #     Short transcriptions often ignore some speech
+                #     For longer transcriptions, nb tokens is not a good mesure,
+                #     because bad transcriptions often use more bad rare shorter tokens.
+                # options.length_penalty,
+                length_penalty=1, 
                 repetition_penalty=options.repetition_penalty,
                 no_repeat_ngram_size=options.no_repeat_ngram_size,
                 max_length=max_length,
@@ -1429,12 +1440,58 @@ class WhisperModel:
                 **kwargs,
             )[0]
 
+            #CBX: Compare all results. 
+            use_nb_chars = False
+            if tokenizer.language_code in ["zh", "ja", "th", "lo", "my", "km", "bo"]:
+                use_nb_chars = True
+            best_result = None
+            best_alp = 0
+            for i in range(0,len(result.sequences_ids)):
+                text = tokenizer.decode(result.sequences_ids[i]).strip()
+                #Use nb words to prefer larger transcriptions.
+                #Nb tokens is not a good mesure, because bad transcriptions often use more bad rare shorter tokens.
+                #len(result.sequences_ids[i])
+                if use_nb_chars:
+                    l = len(text)
+                else:
+                    l = len(re.split(r'(\W+)',text)) 
+                clp = result.scores[i] * (l**options.length_penalty)
+                alp = clp / (l+1)
+                #Use compression penalty (avoid strong redundancies)
+                cp = get_compression_ratio(text)
+                if cp > options.compression_ratio_threshold:
+                    alp -= 0.5
+                if best_result is None or best_alp < alp:
+                    best_result = i
+                    best_alp = alp
+                    
+            class New_Result:
+                pass
+            new_result = New_Result()
+            setattr(new_result,"scores",[result.scores[best_result]])
+            setattr(new_result,"sequences_ids",[result.sequences_ids[best_result]])
+            setattr(new_result,"sequences",[result.sequences[best_result]])
+            setattr(new_result,"no_speech_prob",result.no_speech_prob)
+            result = new_result
+
             tokens = result.sequences_ids[0]
 
             # Recover the average log prob from the returned score.
-            seq_len = len(tokens)
+            #CBX: Use nb words and compression penalty
+            text = tokenizer.decode(tokens).strip()
+            #Use nb words to prefer larger transcriptions.
+            #Nb tokens is not a good mesure, because bad transcriptions often use more bad rare shorter tokens.
+            #seq_len = len(tokens)
+            if use_nb_chars:
+                seq_len = len(text)
+            else:
+                seq_len = len(re.split(r'(\W+)',text)) 
             cum_logprob = result.scores[0] * (seq_len**options.length_penalty)
             avg_logprob = cum_logprob / (seq_len + 1)
+            #Use compression penalty (avoid strong redundancies)
+            compression_ratio = get_compression_ratio(text)
+            if compression_ratio > options.compression_ratio_threshold:
+                avg_logprob -= 0.5
 
             text = tokenizer.decode(tokens).strip()
             compression_ratio = get_compression_ratio(text)

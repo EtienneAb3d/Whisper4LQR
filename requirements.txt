@@ -5,3 +5,5 @@ onnxruntime>=1.14,<2
 torch>=2.1.1 
 av>=11
 tqdm
+torchaudio
+demucs

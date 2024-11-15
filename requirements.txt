@@ -7,3 +7,4 @@ av>=11
 tqdm
 torchaudio
 demucs
+pydub

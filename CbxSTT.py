@@ -77,67 +77,52 @@ class CbxSTT():
     
     #Comparison between Whisper4LQR transcription (.cbx.txt) and a previous one (.txt)
     def align(self,recording_path:str):
-        html_path = re.sub(r'[.](mp3|wav)$','.html',recording_path)
+        html_path = re.sub(r'[.](mp3|wav)$','.cbx.html',recording_path)
         print("Building: "+html_path+" ...")
-        with open(re.sub(r'[.](mp3|wav)$','.cbx.txt',recording_path), 'r', encoding='utf-8') as f:
-            transcribed = f.read()
-        with open(re.sub(r'[.](mp3|wav)$','.txt',recording_path), 'r', encoding='utf-8') as f:
-            orig = f.read()
+        orig_path = re.sub(r'[.](mp3|wav)$','.txt',recording_path)
+        new_path = re.sub(r'[.](mp3|wav)$','.cbx.txt',recording_path)
+        align(orig_path,new_path,html_path)
+    
+def align(orig_path,new_path,html_path):
+    with open(new_path, 'r', encoding='utf-8') as f:
+        new = f.read()
+    with open(orig_path, 'r', encoding='utf-8') as f:
+        orig = f.read()
 
-        orig = re.sub(r'((^|\n)(Agent|Client)[() 0-9:]+)+\n',"\n",orig).strip()
+    orig = re.sub(r'((^|\n)(Agent|Client)[() 0-9:]+)+\n',"\n",orig).strip()
 
-        aligner = CbxAligner()
-        pairs = aligner.alignXml(orig,transcribed)
+    aligner = CbxAligner()
+    pairs = aligner.alignXml(orig,new)
 
-        #Build HTML trace merging identical parts
-        altrace = []
-        alhtml = []
-        wait1 = []
-        wait2 = []
-        state = statePrev = 0
-        for p in pairs:
-            t1 = ""
-            if p[0] is not None:
-                t1 = p[0].token
-            t2 = ""
-            if p[1] is not None:
-                t2 = p[1].token
+    #Build HTML trace merging identical parts
+    altrace = []
+    alhtml = []
+    wait1 = []
+    wait2 = []
+    state = statePrev = 0
+    for p in pairs:
+        t1 = ""
+        if p[0] is not None:
+            t1 = p[0].token
+        t2 = ""
+        if p[1] is not None:
+            t2 = p[1].token
 
-            if re.sub(r'[.,\'↲-]+',"",t1).strip() == "" and re.sub(r'[.,\'↲-]+',"",t2).strip() == "":
-                wait1.append(t1)
-                wait2.append(t2)
-                continue
-            
-            if t1.lower().strip() == t2.lower().strip():
-                state = 0
-            else:
-                state = 1
-                
-            
-            if statePrev == state:
-                wait1.append(t1)
-                wait2.append(t2)
-                continue
-
-            if len(wait1) > 0 or len(wait2) > 0:
-                w1 = "".join(wait1)
-                w2 = "".join(wait2)
-                w1 = re.sub(r'\'>',"]</span>",w1)
-                w2 = re.sub(r'\'>',"]</span>",w2)
-                w1 = re.sub(r'<SEG BE=\'',"<span style='color: blue'>[",w1)
-                w2 = re.sub(r'<SEG BE=\'',"<span style='color: blue'>[",w2)
-                altrace.append(f"{w1}\t{w2}")
-                if statePrev == 0:
-                    color = "black"
-                else:
-                    color = "red"
-                alhtml.append(f"<tr style='color: {color};'><td>[{w1}]</td><td>[{w2}]</td></tr>")
-                wait1 = []
-                wait2 = []
-            
+        if re.sub(r'[.,\'↲-]+',"",t1).strip() == "" and re.sub(r'[.,\'↲-]+',"",t2).strip() == "":
             wait1.append(t1)
             wait2.append(t2)
-            statePrev = state
+            continue
+        
+        if t1.lower().strip() == t2.lower().strip():
+            state = 0
+        else:
+            state = 1
+            
+        
+        if statePrev == state:
+            wait1.append(t1)
+            wait2.append(t2)
+            continue
 
         if len(wait1) > 0 or len(wait2) > 0:
             w1 = "".join(wait1)
@@ -154,9 +139,29 @@ class CbxSTT():
             alhtml.append(f"<tr style='color: {color};'><td>[{w1}]</td><td>[{w2}]</td></tr>")
             wait1 = []
             wait2 = []
+        
+        wait1.append(t1)
+        wait2.append(t2)
+        statePrev = state
 
-        with open(html_path, 'w', encoding='utf-8') as f:
-            f.write("<!DOCTYPE html>\n<html>\n<head>\n<meta charset='UTF-8'>\n</head>\n<body>\n"
-                    +"<table>\n")
-            f.write("\n".join(alhtml))
-            f.write("\n</table>\n</body>\n</html>\n")
+    if len(wait1) > 0 or len(wait2) > 0:
+        w1 = "".join(wait1)
+        w2 = "".join(wait2)
+        w1 = re.sub(r'\'>',"]</span>",w1)
+        w2 = re.sub(r'\'>',"]</span>",w2)
+        w1 = re.sub(r'<SEG BE=\'',"<span style='color: blue'>[",w1)
+        w2 = re.sub(r'<SEG BE=\'',"<span style='color: blue'>[",w2)
+        altrace.append(f"{w1}\t{w2}")
+        if statePrev == 0:
+            color = "black"
+        else:
+            color = "red"
+        alhtml.append(f"<tr style='color: {color};'><td>[{w1}]</td><td>[{w2}]</td></tr>")
+        wait1 = []
+        wait2 = []
+
+    with open(html_path, 'w', encoding='utf-8') as f:
+        f.write("<!DOCTYPE html>\n<html>\n<head>\n<meta charset='UTF-8'>\n</head>\n<body>\n"
+                +"<table>\n")
+        f.write("\n".join(alhtml))
+        f.write("\n</table>\n</body>\n</html>\n")

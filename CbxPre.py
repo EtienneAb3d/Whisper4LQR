@@ -4,6 +4,7 @@ import torch
 import os
 import re
 import shutil
+from pydub import AudioSegment
 
 class CbxPre:
     def __init__(self):
@@ -37,8 +38,31 @@ class CbxPre:
         to_be_deleted.append(processed_path)
         to_be_deleted.append(processed_path+".log")
         
-        demucs_audio(pathIn=processed_path,model=self.modelDemucs,device="cuda:0")
-        processed_path = re.sub(r'[.](mp3|wav)$',".vocals.wav",processed_path)
+        audio = AudioSegment.from_file(processed_path)
+        if audio.channels > 1:
+            channels = audio.split_to_mono()
+            left_channel = channels[0]
+            right_channel = channels[1]
+            left_path = re.sub(r'[.](mp3|wav)$',".left.wav",recording_path)
+            right_path = re.sub(r'[.](mp3|wav)$',".right.wav",recording_path)
+            left_channel.export(left_path)
+            right_channel.export(right_path)
+            demucs_audio(pathIn=left_path,model=self.modelDemucs,device="cuda:0")
+            to_be_deleted.append(left_path)
+            left_path = re.sub(r'[.](mp3|wav)$',".vocals.wav",left_path)
+            to_be_deleted.append(left_path)
+            demucs_audio(pathIn=right_path,model=self.modelDemucs,device="cuda:0")
+            to_be_deleted.append(right_path)
+            right_path = re.sub(r'[.](mp3|wav)$',".vocals.wav",right_path)
+            to_be_deleted.append(right_path)
+            left_channel = AudioSegment.from_file(left_path)
+            right_channel = AudioSegment.from_file(right_path)
+            stereo_audio = AudioSegment.from_mono_audiosegments(left_channel, right_channel)
+            processed_path = re.sub(r'[.](mp3|wav)$',".vocals.wav",processed_path)
+            stereo_audio.export(processed_path, format="wav")
+        else:
+            demucs_audio(pathIn=processed_path,model=self.modelDemucs,device="cuda:0")
+            processed_path = re.sub(r'[.](mp3|wav)$',".vocals.wav",processed_path)
         to_be_deleted.append(processed_path)
 
         out_path = re.sub(r'[.](mp3|wav)$',".loud.wav",recording_path)

@@ -16,6 +16,8 @@ def demucs_audio(pathIn: str,
                  device=None,
                  pathVocals: str = None,
                  pathOther: str = None):
+    print("Demucs: "+pathIn)
+    
     if model is None:
         model = load_demucs_model()
 
